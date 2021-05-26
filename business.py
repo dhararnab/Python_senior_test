@@ -37,15 +37,19 @@ def dereference_client_users_allowed_actions_for_client(client_users_list):
 
     permission_ids = list()
     cu_api_user_map = dict()
+    direct_permissions = list()
+    role_permission_ids = list()
     for au in api_users:
         if au.get("user_role"):
             for r in au.get("user_role"):
                 roles = mongo.roles.find_one({'_id': r, 'enabled': True})
                 if roles:
                     permission_ids += roles.get('permission', list())
+                    role_permission_ids += roles.get('permission', list())
         permission_ids += au.get('permissions', list())
+        direct_permissions += au.get('permissions', list())
         cu_api_user_map[au.get('client_user')] = au
-
+    
     # Try to get routes _ids resolved and mapped to permissions from global variable
     route_ids = list()
     for pid in permission_ids:
@@ -101,8 +105,10 @@ def dereference_client_users_allowed_actions_for_client(client_users_list):
                     p['ui_aliases'].update(route['ui_aliases'])
 
             p['role_based'] = False
-            if pid in role_permission:
+            if pid in role_permission or pid in role_permission_ids:
                 p['role_based'] = True
+            if pid in direct_permissions:
+                p['role_based'] = False
 
             p['routes'] = deref_routes
             p['routines'] = []
